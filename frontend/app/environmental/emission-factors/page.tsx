@@ -87,22 +87,22 @@ export default function EmissionFactorsPage() {
               <CardTitle className="text-lg">Add New Emission Factor</CardTitle>
             </CardHeader>
             <CardContent>
-              <form className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <form className="grid grid-cols-1 md:grid-cols-4 gap-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
                   <Label>Factor Name</Label>
-                  <Input placeholder="e.g., Electricity" />
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., Electricity" required />
                 </div>
                 <div className="space-y-2">
                   <Label>Unit</Label>
-                  <Input placeholder="e.g., kWh" />
+                  <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="e.g., kWh" required />
                 </div>
                 <div className="space-y-2">
                   <Label>CO2 Factor (kg CO2e)</Label>
-                  <Input placeholder="e.g., 0.233" type="number" step="0.001" />
+                  <Input value={form.co2Factor} onChange={(e) => setForm({ ...form, co2Factor: e.target.value })} placeholder="e.g., 0.233" type="number" step="0.001" required />
                 </div>
                 <div className="space-y-2 flex flex-col justify-end gap-2">
-                  <Button variant="eco-green" className="w-full">Save</Button>
-                  <Button variant="outline" className="w-full" onClick={() => setShowForm(false)}>Cancel</Button>
+                  <Button type="submit" variant="eco-green" className="w-full">Save</Button>
+                  <Button type="button" variant="outline" className="w-full" onClick={() => setShowForm(false)}>Cancel</Button>
                 </div>
               </form>
             </CardContent>
@@ -172,7 +172,7 @@ export default function EmissionFactorsPage() {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#16a34a]">{emissionFactorsData.length}</div>
+                <div className="text-3xl font-bold text-[#16a34a]">{factors.length}</div>
                 <p className="text-sm text-muted-foreground mt-2">Total Factors</p>
               </div>
             </CardContent>
