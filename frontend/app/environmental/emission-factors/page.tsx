@@ -1,79 +1,58 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Edit, Trash2, ChevronLeft } from 'lucide-react'
+import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
-const emissionFactorsData = [
-  {
-    id: 1,
-    name: 'Electricity (Grid)',
-    unit: 'kWh',
-    co2Factor: 0.233,
-    category: 'Energy',
-    source: 'EPA',
-    status: 'Active',
-  },
-  {
-    id: 2,
-    name: 'Natural Gas',
-    unit: 'therm',
-    co2Factor: 5.3,
-    category: 'Energy',
-    source: 'EPA',
-    status: 'Active',
-  },
-  {
-    id: 3,
-    name: 'Gasoline',
-    unit: 'gallon',
-    co2Factor: 8.887,
-    category: 'Transportation',
-    source: 'EPA',
-    status: 'Active',
-  },
-  {
-    id: 4,
-    name: 'Diesel',
-    unit: 'gallon',
-    co2Factor: 10.15,
-    category: 'Transportation',
-    source: 'EPA',
-    status: 'Active',
-  },
-  {
-    id: 5,
-    name: 'Waste to Landfill',
-    unit: 'metric ton',
-    co2Factor: 0.74,
-    category: 'Waste',
-    source: 'EPA',
-    status: 'Active',
-  },
-  {
-    id: 6,
-    name: 'Water Usage',
-    unit: 'gallon',
-    co2Factor: 0.000132,
-    category: 'Water',
-    source: 'EPA',
-    status: 'Active',
-  },
-]
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
 
 export default function EmissionFactorsPage() {
+  const [factors, setFactors] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [form, setForm] = useState({ name: '', unit: '', co2Factor: '', category: 'Energy', source: 'Manual', status: 'Active' })
 
-  const filteredFactors = emissionFactorsData.filter((factor) =>
-    factor.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  useEffect(() => {
+    fetch(`${API_BASE}/operations/emission-factors`)
+      .then((res) => res.json())
+      .then((data) => setFactors(Array.isArray(data) ? data : []))
+      .catch(() => setFactors([]))
+  }, [])
+
+  const filteredFactors = useMemo(() => factors.filter((factor) =>
+    factor.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  ), [factors, searchTerm])
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const payload = {
+      name: form.name,
+      unit: form.unit,
+      co2Factor: Number(form.co2Factor || 0),
+      category: form.category,
+      source: form.source,
+      status: form.status,
+    }
+
+    const response = await fetch(`${API_BASE}/operations/emission-factors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (response.ok) {
+      const created = await response.json()
+      setFactors((prev) => [created, ...prev])
+      setForm({ name: '', unit: '', co2Factor: '', category: 'Energy', source: 'Manual', status: 'Active' })
+      setShowForm(false)
+    }
+  }
 
   return (
     <AppLayout>
@@ -201,7 +180,7 @@ export default function EmissionFactorsPage() {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#2563eb]">{emissionFactorsData.filter(f => f.status === 'Active').length}</div>
+                <div className="text-3xl font-bold text-[#2563eb]">{factors.filter((f) => f.status === 'Active').length}</div>
                 <p className="text-sm text-muted-foreground mt-2">Active Factors</p>
               </div>
             </CardContent>
@@ -209,7 +188,7 @@ export default function EmissionFactorsPage() {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#7c3aed]">{new Set(emissionFactorsData.map(f => f.category)).size}</div>
+                <div className="text-3xl font-bold text-[#7c3aed]">{new Set(factors.map((f) => f.category)).size}</div>
                 <p className="text-sm text-muted-foreground mt-2">Categories</p>
               </div>
             </CardContent>

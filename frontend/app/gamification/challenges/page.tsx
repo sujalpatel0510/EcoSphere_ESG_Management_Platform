@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Plus, Zap, Users, TrendingUp, Target } from 'lucide-react'
+import { Plus, Zap, Users, TrendingUp } from 'lucide-react'
 
-const challenges = [
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
+
+const initialChallenges = [
   {
     id: 1,
     name: 'Carbon Neutral Week',
@@ -72,11 +74,46 @@ const leaderboard = [
 ]
 
 export default function ChallengesPage() {
+  const [challenges, setChallenges] = useState<any[]>(initialChallenges)
   const [filterStatus, setFilterStatus] = useState('All')
+  const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '', participants: '0', completed: '0', reward: '', difficulty: 'Medium', status: 'Active', progress: '0' })
+
+  useEffect(() => {
+    fetch(`${API_BASE}/operations/challenges`)
+      .then((res) => res.json())
+      .then((data) => setChallenges(Array.isArray(data) && data.length ? data : initialChallenges))
+      .catch(() => setChallenges(initialChallenges))
+  }, [])
 
   const filteredChallenges = challenges.filter(
     (c) => filterStatus === 'All' || c.status === filterStatus
   )
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const response = await fetch(`${API_BASE}/operations/challenges`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name,
+        description: form.description,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        participants: Number(form.participants || 0),
+        completed: Number(form.completed || 0),
+        reward: form.reward,
+        difficulty: form.difficulty,
+        status: form.status,
+        progress: Number(form.progress || 0),
+      }),
+    })
+
+    if (response.ok) {
+      const created = await response.json()
+      setChallenges((prev) => [created, ...prev])
+      setForm({ name: '', description: '', startDate: '', endDate: '', participants: '0', completed: '0', reward: '', difficulty: 'Medium', status: 'Active', progress: '0' })
+    }
+  }
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -116,12 +153,15 @@ export default function ChallengesPage() {
                   Launch a new ESG challenge for your team
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Challenge Name</label>
                   <input
                     placeholder="e.g., Energy Saving Challenge"
                     className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -130,20 +170,32 @@ export default function ChallengesPage() {
                     placeholder="Describe the challenge"
                     className="w-full px-3 py-2 rounded-md border border-input bg-background"
                     rows={3}
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Start Date</label>
+                    <input type="date" className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">End Date</label>
+                    <input type="date" className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Difficulty</label>
-                  <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background">
+                  <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
                     <option>Easy</option>
                     <option>Medium</option>
                     <option>Hard</option>
                   </select>
                 </div>
-                <Button className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
+                <Button type="submit" className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
                   Create Challenge
                 </Button>
-              </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>

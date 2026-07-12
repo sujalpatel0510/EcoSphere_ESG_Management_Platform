@@ -1,12 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { AppLayout } from '@/components/layout/app-layout'
 import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 import { Users, TrendingUp, Target, CheckCircle2 } from 'lucide-react'
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
 
 const genderData = [
   { name: 'Male', value: 55, employees: 121 },
@@ -39,39 +43,34 @@ const levelData = [
 
 const COLORS = ['#16a34a', '#2563eb', '#7c3aed', '#f97316', '#ef4444']
 
-const initiatives = [
-  {
-    id: 1,
-    name: 'Women in Leadership Program',
-    target: '40% female leadership by 2025',
-    current: '28%',
-    status: 'In Progress',
-  },
-  {
-    id: 2,
-    name: 'Ethnic Diversity Initiative',
-    target: '50% ethnic diversity',
-    current: '45%',
-    status: 'On Track',
-  },
-  {
-    id: 3,
-    name: 'LGBTQ+ Support Group',
-    target: 'Expand member participation',
-    current: '156 members',
-    status: 'Active',
-  },
-  {
-    id: 4,
-    name: 'Mentorship Program',
-    target: '100+ mentee pairs',
-    current: '87 pairs',
-    status: 'In Progress',
-  },
-]
-
 export default function DiversityInclusionPage() {
+  const [initiatives, setInitiatives] = useState<any[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ name: '', target: '', current: '', status: 'In Progress' })
   const totalEmployees = 220
+
+  useEffect(() => {
+    fetch(`${API_BASE}/operations/diversity-initiatives`)
+      .then((res) => res.json())
+      .then((data) => setInitiatives(Array.isArray(data) ? data : []))
+      .catch(() => setInitiatives([]))
+  }, [])
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const response = await fetch(`${API_BASE}/operations/diversity-initiatives`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+
+    if (response.ok) {
+      const created = await response.json()
+      setInitiatives((prev) => [created, ...prev])
+      setForm({ name: '', target: '', current: '', status: 'In Progress' })
+      setShowForm(false)
+    }
+  }
 
   return (
     <AppLayout>
@@ -251,12 +250,37 @@ export default function DiversityInclusionPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>D&I Initiatives</CardTitle>
-              <Button className="bg-[#16a34a] hover:bg-[#15803d] text-white">
+              <Button className="bg-[#16a34a] hover:bg-[#15803d] text-white" onClick={() => setShowForm((value) => !value)}>
                 Add Initiative
               </Button>
             </div>
           </CardHeader>
           <CardContent>
+            {showForm && (
+              <form className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Women in Leadership" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Target</Label>
+                  <Input value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} placeholder="40% female leadership" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Current</Label>
+                  <Input value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} placeholder="28%" required />
+                </div>
+                <div className="space-y-2 flex flex-col justify-end gap-2">
+                  <Label>Status</Label>
+                  <select className="h-10 rounded-md border border-input bg-background px-3" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    <option>In Progress</option>
+                    <option>On Track</option>
+                    <option>Active</option>
+                  </select>
+                  <Button type="submit" className="bg-[#16a34a] hover:bg-[#15803d] text-white">Save</Button>
+                </div>
+              </form>
+            )}
             <div className="space-y-4">
               {initiatives.map((init) => (
                 <div

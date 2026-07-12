@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Plus, Calendar, Users, CheckCircle2, AlertCircle, Clock, FileText } from 'lucide-react'
+import { Plus, Calendar, Users, CheckCircle2, Clock, FileText } from 'lucide-react'
 
-const audits = [
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
+
+const initialAudits = [
   {
     id: 1,
     name: 'Internal ESG Audit Q2 2024',
@@ -71,7 +73,7 @@ const audits = [
   },
 ]
 
-const auditFindings = [
+const initialFindings = [
   {
     id: 1,
     auditName: 'Internal ESG Audit Q2 2024',
@@ -103,6 +105,49 @@ const auditFindings = [
 
 export default function AuditsPage() {
   const [activeTab, setActiveTab] = useState<'audits' | 'findings'>('audits')
+  const [audits, setAudits] = useState<any[]>(initialAudits)
+  const [auditFindings, setAuditFindings] = useState<any[]>(initialFindings)
+  const [form, setForm] = useState({ name: '', type: 'Internal', scope: '', auditor: '', startDate: '', endDate: '', status: 'Scheduled', findings: 'N/A', issues: '0' })
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API_BASE}/operations/audits`).then((res) => res.json()),
+      fetch(`${API_BASE}/operations/audit-findings`).then((res) => res.json()),
+    ])
+      .then(([auditData, findingsData]) => {
+        setAudits(Array.isArray(auditData) && auditData.length ? auditData : initialAudits)
+        setAuditFindings(Array.isArray(findingsData) && findingsData.length ? findingsData : initialFindings)
+      })
+      .catch(() => {
+        setAudits(initialAudits)
+        setAuditFindings(initialFindings)
+      })
+  }, [])
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const response = await fetch(`${API_BASE}/operations/audits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name,
+        type: form.type,
+        scope: form.scope,
+        auditor: form.auditor,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        status: form.status,
+        findings: form.findings,
+        issues: Number(form.issues || 0),
+      }),
+    })
+
+    if (response.ok) {
+      const created = await response.json()
+      setAudits((prev) => [created, ...prev])
+      setForm({ name: '', type: 'Internal', scope: '', auditor: '', startDate: '', endDate: '', status: 'Scheduled', findings: 'N/A', issues: '0' })
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -155,17 +200,20 @@ export default function AuditsPage() {
                   Create a new internal or external audit
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Audit Name</label>
                   <input
                     placeholder="e.g., Q3 Internal Audit"
                     className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Type</label>
-                  <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background">
+                  <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
                     <option>Internal</option>
                     <option>External</option>
                     <option>Regulatory</option>
@@ -176,12 +224,28 @@ export default function AuditsPage() {
                   <input
                     placeholder="e.g., ESG metrics, Financial controls"
                     className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background"
+                    value={form.scope}
+                    onChange={(e) => setForm({ ...form, scope: e.target.value })}
                   />
                 </div>
-                <Button className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Auditor</label>
+                  <input className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.auditor} onChange={(e) => setForm({ ...form, auditor: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Start Date</label>
+                    <input type="date" className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">End Date</label>
+                    <input type="date" className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
                   Schedule Audit
                 </Button>
-              </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>

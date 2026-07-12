@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Download, Filter, Search } from 'lucide-react'
 import Link from 'next/link'
@@ -17,67 +18,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
 
-const carbonTransactionsData = [
-  {
-    id: 1,
-    date: '2024-07-15',
-    department: 'Manufacturing',
-    source: 'Natural Gas Usage',
-    quantity: 150,
-    unit: 'therm',
-    co2Equivalent: 795,
-    factor: 5.3,
-    status: 'Approved',
-  },
-  {
-    id: 2,
-    date: '2024-07-14',
-    department: 'Logistics',
-    source: 'Fleet Fuel (Diesel)',
-    quantity: 200,
-    unit: 'gallon',
-    co2Equivalent: 2030,
-    factor: 10.15,
-    status: 'Approved',
-  },
-  {
-    id: 3,
-    date: '2024-07-13',
-    department: 'Operations',
-    source: 'Electricity Consumption',
-    quantity: 5000,
-    unit: 'kWh',
-    co2Equivalent: 1165,
-    factor: 0.233,
-    status: 'Approved',
-  },
-  {
-    id: 4,
-    date: '2024-07-12',
-    department: 'Facilities',
-    source: 'Waste to Landfill',
-    quantity: 25,
-    unit: 'metric ton',
-    co2Equivalent: 18.5,
-    factor: 0.74,
-    status: 'Pending',
-  },
-  {
-    id: 5,
-    date: '2024-07-11',
-    department: 'Manufacturing',
-    source: 'Water Usage',
-    quantity: 100000,
-    unit: 'gallon',
-    co2Equivalent: 13.2,
-    factor: 0.000132,
-    status: 'Approved',
-  },
-]
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
 
 const monthlyEmissionsData = [
   { month: 'Jan', emissions: 4500 },
@@ -98,15 +42,52 @@ const departmentEmissionsData = [
 ]
 
 export default function CarbonTransactionsPage() {
+  const [transactions, setTransactions] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ date: '', department: '', source: '', quantity: '', unit: '', co2Equivalent: '', factor: '', status: 'Pending' })
 
-  const filteredTransactions = carbonTransactionsData.filter((trans) =>
-    trans.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    trans.department.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  useEffect(() => {
+    fetch(`${API_BASE}/operations/carbon-transactions`)
+      .then((res) => res.json())
+      .then((data) => setTransactions(Array.isArray(data) ? data : []))
+      .catch(() => setTransactions([]))
+  }, [])
 
-  const totalEmissions = carbonTransactionsData.reduce((sum, trans) => sum + trans.co2Equivalent, 0)
-  const averageEmissions = (totalEmissions / carbonTransactionsData.length).toFixed(2)
+  const filteredTransactions = useMemo(() => transactions.filter((trans) =>
+    trans.source?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trans.department?.toLowerCase().includes(searchTerm.toLowerCase())
+  ), [transactions, searchTerm])
+
+  const totalEmissions = transactions.reduce((sum, trans) => sum + Number(trans.co2Equivalent || 0), 0)
+  const averageEmissions = transactions.length ? (totalEmissions / transactions.length).toFixed(2) : '0.00'
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const payload = {
+      date: form.date,
+      department: form.department,
+      source: form.source,
+      quantity: Number(form.quantity || 0),
+      unit: form.unit,
+      co2Equivalent: Number(form.co2Equivalent || 0),
+      factor: Number(form.factor || 0),
+      status: form.status,
+    }
+
+    const response = await fetch(`${API_BASE}/operations/carbon-transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (response.ok) {
+      const created = await response.json()
+      setTransactions((prev) => [created, ...prev])
+      setForm({ date: '', department: '', source: '', quantity: '', unit: '', co2Equivalent: '', factor: '', status: 'Pending' })
+      setShowForm(false)
+    }
+  }
 
   return (
     <AppLayout>
@@ -133,7 +114,7 @@ export default function CarbonTransactionsPage() {
               <Download size={18} />
               Export
             </Button>
-            <Button variant="eco-green">
+            <Button variant="eco-green" onClick={() => setShowForm((value) => !value)}>
               <Plus size={18} />
               Log Emission
             </Button>
@@ -145,7 +126,7 @@ export default function CarbonTransactionsPage() {
           <Card>
             <CardContent className="p-6">
               <p className="text-sm text-muted-foreground mb-2">Total Transactions</p>
-              <p className="text-3xl font-bold text-[#16a34a]">{carbonTransactionsData.length}</p>
+              <p className="text-3xl font-bold text-[#16a34a]">{transactions.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -166,7 +147,7 @@ export default function CarbonTransactionsPage() {
             <CardContent className="p-6">
               <p className="text-sm text-muted-foreground mb-2">Approved</p>
               <p className="text-3xl font-bold text-green-600">
-                {carbonTransactionsData.filter(t => t.status === 'Approved').length}
+                {transactions.filter((t) => t.status === 'Approved').length}
               </p>
             </CardContent>
           </Card>
@@ -228,6 +209,55 @@ export default function CarbonTransactionsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {showForm && (
+          <Card className="bg-accent/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Log a New Emission</CardTitle>
+              <CardDescription>Save a transaction so it stays in the system.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="Manufacturing" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Source</Label>
+                  <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Natural Gas" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Quantity</Label>
+                  <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="150" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Unit</Label>
+                  <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="therm" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>CO2e (tons)</Label>
+                  <Input type="number" step="0.01" value={form.co2Equivalent} onChange={(e) => setForm({ ...form, co2Equivalent: e.target.value })} placeholder="795" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Factor</Label>
+                  <Input type="number" step="0.01" value={form.factor} onChange={(e) => setForm({ ...form, factor: e.target.value })} placeholder="5.3" />
+                </div>
+                <div className="space-y-2 flex flex-col justify-end gap-2">
+                  <Label>Status</Label>
+                  <select className="h-10 rounded-md border border-input bg-background px-3" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    <option>Pending</option>
+                    <option>Approved</option>
+                  </select>
+                  <Button type="submit" variant="eco-green">Save</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Search and Filter */}
         <div className="flex gap-2">
