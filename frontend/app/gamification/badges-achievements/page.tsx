@@ -10,6 +10,7 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { Star, Trophy, Zap, Heart, Leaf, Users, Plus, Edit2, Trash2 } from 'lucide-react'
 
 const iconMap: Record<string, any> = { Leaf, Star, Trophy, Zap, Heart, Users }
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:5000'
 
 export default function BadgesAchievementsPage() {
   const [badges, setBadges] = useState<any[]>([])
@@ -22,15 +23,21 @@ export default function BadgesAchievementsPage() {
   const [editingBadgeId, setEditingBadgeId] = useState<number | null>(null)
 
   const loadData = () => {
-    fetch('http://127.0.0.1:5000/api/gamification/badges')
-      .then((res) => res.json())
+    fetch(`${API_BASE_URL}/api/gamification/badges`)
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('Failed to load badges')))
       .then((data) => setBadges(data))
-      .catch((err) => console.error('Error fetching badges:', err))
+      .catch((err) => {
+        console.error('Error fetching badges:', err)
+        setBadges([])
+      })
 
-    fetch('http://127.0.0.1:5000/api/gamification/achievements')
-      .then((res) => res.json())
+    fetch(`${API_BASE_URL}/api/gamification/achievements`)
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('Failed to load achievements')))
       .then((data) => setAchievements(data))
-      .catch((err) => console.error('Error fetching achievements:', err))
+      .catch((err) => {
+        console.error('Error fetching achievements:', err)
+        setAchievements([])
+      })
   }
 
   useEffect(() => {
@@ -44,7 +51,7 @@ export default function BadgesAchievementsPage() {
 
   const handleSaveBadge = () => {
     const method = editingBadgeId ? 'PUT' : 'POST'
-    fetch(`http://127.0.0.1:5000/api/gamification/badges${editingBadgeId ? `/${editingBadgeId}` : ''}`, {
+    fetch(`${API_BASE_URL}/api/gamification/badges${editingBadgeId ? `/${editingBadgeId}` : ''}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(badgeForm),
@@ -58,7 +65,7 @@ export default function BadgesAchievementsPage() {
   }
 
   const handleDeleteBadge = (id: number) => {
-    fetch(`http://127.0.0.1:5000/api/gamification/badges/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/gamification/badges/${id}`, { method: 'DELETE' })
       .then(() => setBadges(badges.filter((badge) => badge.id !== id)))
       .catch((err) => console.error('Error deleting badge:', err))
   }
@@ -76,7 +83,7 @@ export default function BadgesAchievementsPage() {
   }
 
   const handleSaveAchievement = () => {
-    fetch('http://127.0.0.1:5000/api/gamification/achievements', {
+    fetch(`${API_BASE_URL}/api/gamification/achievements`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(achievementForm),

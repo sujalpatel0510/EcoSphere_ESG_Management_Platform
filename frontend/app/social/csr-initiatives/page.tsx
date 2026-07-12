@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AppLayout } from '@/components/layout/app-layout'
 import { Plus, Search, Edit2, Trash2, Heart, Users, Briefcase, TrendingUp } from 'lucide-react'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:5000'
+
 export default function CSRInitiativesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [initiatives, setInitiatives] = useState<any[]>([])
@@ -19,10 +21,13 @@ export default function CSRInitiativesPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
 
   const loadInitiatives = () => {
-    fetch('http://127.0.0.1:5000/api/social/csr-initiatives')
-      .then(res => res.json())
+    fetch(`${API_BASE_URL}/api/social/csr-initiatives`)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to load initiatives')))
       .then(data => setInitiatives(data))
-      .catch(err => console.error('Error fetching initiatives:', err))
+      .catch(err => {
+        console.error('Error fetching initiatives:', err)
+        setInitiatives([])
+      })
   }
 
   useEffect(() => {
@@ -46,8 +51,8 @@ export default function CSRInitiativesPage() {
       body: JSON.stringify(payload),
     }
 
-    fetch(`http://127.0.0.1:5000/api/social/csr-initiatives${editingId ? `/${editingId}` : ''}`, requestOptions)
-      .then(res => res.json())
+    fetch(`${API_BASE_URL}/api/social/csr-initiatives${editingId ? `/${editingId}` : ''}`, requestOptions)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to save initiative')))
       .then(() => {
         loadInitiatives()
         setOpen(false)
@@ -56,7 +61,7 @@ export default function CSRInitiativesPage() {
   }
 
   const handleDelete = (id: number) => {
-    fetch(`http://127.0.0.1:5000/api/social/csr-initiatives/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/social/csr-initiatives/${id}`, { method: 'DELETE' })
       .then(() => setInitiatives(initiatives.filter(i => i.id !== id)))
   }
 

@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AppLayout } from '@/components/layout/app-layout'
 import { Plus, Search, FileText, CheckCircle2, AlertCircle, Clock, Download, Edit2, Trash2 } from 'lucide-react'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:5000'
+
 const complianceMetrics = [
   { name: 'Policies Approved', value: 3, total: 5, percentage: 60 },
   { name: 'Training Completion', value: 156, total: 200, percentage: 78 },
@@ -27,10 +29,13 @@ export default function PoliciesCompliancePage() {
   const categories = ['All', 'Ethics', 'Compliance', 'Environmental', 'Social']
 
   const loadPolicies = () => {
-    fetch('http://127.0.0.1:5000/api/governance/policies')
-      .then((res) => res.json())
+    fetch(`${API_BASE_URL}/api/governance/policies`)
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('Failed to load policies')))
       .then((data) => setPolicies(data))
-      .catch((err) => console.error('Error fetching policies:', err))
+      .catch((err) => {
+        console.error('Error fetching policies:', err)
+        setPolicies([])
+      })
   }
 
   useEffect(() => {
@@ -44,7 +49,7 @@ export default function PoliciesCompliancePage() {
 
   const handleSave = () => {
     const method = editingId ? 'PUT' : 'POST'
-    fetch(`http://127.0.0.1:5000/api/governance/policies${editingId ? `/${editingId}` : ''}`, {
+    fetch(`${API_BASE_URL}/api/governance/policies${editingId ? `/${editingId}` : ''}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
@@ -58,7 +63,7 @@ export default function PoliciesCompliancePage() {
   }
 
   const handleDelete = (id: number) => {
-    fetch(`http://127.0.0.1:5000/api/governance/policies/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/governance/policies/${id}`, { method: 'DELETE' })
       .then(() => setPolicies(policies.filter((policy) => policy.id !== id)))
       .catch((err) => console.error('Error deleting policy:', err))
   }

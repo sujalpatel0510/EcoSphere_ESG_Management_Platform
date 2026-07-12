@@ -11,6 +11,8 @@ import { Plus, Edit, Trash2, Target } from 'lucide-react'
 import Link from 'next/link'
 import { Progress } from '@/components/ui/progress'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:5000'
+
 export default function EnvironmentalGoalsPage() {
   const [goals, setGoals] = useState<any[]>([])
   const [open, setOpen] = useState(false)
@@ -29,10 +31,13 @@ export default function EnvironmentalGoalsPage() {
   })
 
   const loadGoals = () => {
-    fetch('http://127.0.0.1:5000/api/environmental/goals')
-      .then((res) => res.json())
+    fetch(`${API_BASE_URL}/api/environmental/goals`)
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('Failed to load goals')))
       .then((data) => setGoals(data))
-      .catch((err) => console.error('Error fetching goals:', err))
+      .catch((err) => {
+        console.error('Error fetching goals:', err)
+        setGoals([])
+      })
   }
 
   useEffect(() => {
@@ -64,7 +69,7 @@ export default function EnvironmentalGoalsPage() {
     }
 
     const method = editingId ? 'PUT' : 'POST'
-    fetch(`http://127.0.0.1:5000/api/environmental/goals${editingId ? `/${editingId}` : ''}`, {
+    fetch(`${API_BASE_URL}/api/environmental/goals${editingId ? `/${editingId}` : ''}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -78,7 +83,7 @@ export default function EnvironmentalGoalsPage() {
   }
 
   const handleDelete = (id: number) => {
-    fetch(`http://127.0.0.1:5000/api/environmental/goals/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/environmental/goals/${id}`, { method: 'DELETE' })
       .then(() => setGoals(goals.filter((goal) => goal.id !== id)))
       .catch((err) => console.error('Error deleting goal:', err))
   }
