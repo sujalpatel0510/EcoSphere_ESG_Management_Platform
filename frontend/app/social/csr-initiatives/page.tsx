@@ -14,38 +14,65 @@ export default function CSRInitiativesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [initiatives, setInitiatives] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [newInit, setNewInit] = useState({ name: '', description: '', category: 'Healthcare' })
+  const [newInit, setNewInit] = useState({ name: '', description: '', category: 'Healthcare', impact: 'N/A', budget: '$0', status: 'Planning', startDate: '', team: '1' })
   const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
 
-  useEffect(() => {
+  const loadInitiatives = () => {
     fetch('http://127.0.0.1:5000/api/social/csr-initiatives')
       .then(res => res.json())
       .then(data => setInitiatives(data))
-      .catch(err => console.error("Error fetching initiatives:", err))
+      .catch(err => console.error('Error fetching initiatives:', err))
+  }
+
+  useEffect(() => {
+    loadInitiatives()
   }, [])
 
+  const resetForm = () => {
+    setNewInit({ name: '', description: '', category: 'Healthcare', impact: 'N/A', budget: '$0', status: 'Planning', startDate: '', team: '1' })
+    setEditingId(null)
+  }
+
   const handleCreate = () => {
-    fetch('http://127.0.0.1:5000/api/social/csr-initiatives', {
-      method: 'POST',
+    const payload = {
+      ...newInit,
+      team: Number(newInit.team || 0),
+    }
+
+    const requestOptions = {
+      method: editingId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...newInit,
-        impact: 'N/A',
-        budget: '$0',
-        team: 1
-      })
-    })
+      body: JSON.stringify(payload),
+    }
+
+    fetch(`http://127.0.0.1:5000/api/social/csr-initiatives${editingId ? `/${editingId}` : ''}`, requestOptions)
       .then(res => res.json())
-      .then(data => {
-        setInitiatives([...initiatives, data])
+      .then(() => {
+        loadInitiatives()
         setOpen(false)
-        setNewInit({ name: '', description: '', category: 'Healthcare' })
+        resetForm()
       })
   }
 
   const handleDelete = (id: number) => {
     fetch(`http://127.0.0.1:5000/api/social/csr-initiatives/${id}`, { method: 'DELETE' })
       .then(() => setInitiatives(initiatives.filter(i => i.id !== id)))
+  }
+
+  const handleEdit = (init: any) => {
+    setEditingId(init.id)
+    setNewInit({
+      name: init.name,
+      description: init.description,
+      category: init.category,
+      impact: init.impact || 'N/A',
+      budget: init.budget || '$0',
+      status: init.status || 'Planning',
+      startDate: init.startDate || '',
+      team: String(init.team || 1),
+    })
+    setOpen(true)
   }
 
   const categories = ['All', 'Healthcare', 'Education', 'Environment', 'Social']
@@ -103,9 +130,9 @@ export default function CSRInitiativesPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Initiative</DialogTitle>
+                <DialogTitle>{editingId ? 'Edit Initiative' : 'Create New Initiative'}</DialogTitle>
                 <DialogDescription>
-                  Add a new CSR initiative to your portfolio
+                  {editingId ? 'Update the selected initiative details.' : 'Add a new CSR initiative to your portfolio.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -141,8 +168,62 @@ export default function CSRInitiativesPage() {
                     <option>Social</option>
                   </select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="impact">Impact</Label>
+                    <Input
+                      id="impact"
+                      placeholder="e.g., 500 families"
+                      value={newInit.impact}
+                      onChange={(e) => setNewInit({ ...newInit, impact: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="budget">Budget</Label>
+                    <Input
+                      id="budget"
+                      placeholder="e.g., $25,000"
+                      value={newInit.budget}
+                      onChange={(e) => setNewInit({ ...newInit, budget: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <select
+                      title="Status select"
+                      className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background"
+                      value={newInit.status}
+                      onChange={(e) => setNewInit({ ...newInit, status: e.target.value })}
+                    >
+                      <option>Planning</option>
+                      <option>Active</option>
+                      <option>Completed</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="team">Team Size</Label>
+                    <Input
+                      id="team"
+                      type="number"
+                      min="1"
+                      value={newInit.team}
+                      onChange={(e) => setNewInit({ ...newInit, team: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={newInit.startDate}
+                    onChange={(e) => setNewInit({ ...newInit, startDate: e.target.value })}
+                  />
+                </div>
                 <Button onClick={handleCreate} className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
-                  Create Initiative
+                  {editingId ? 'Save Changes' : 'Create Initiative'}
                 </Button>
               </div>
             </DialogContent>
@@ -255,6 +336,7 @@ export default function CSRInitiativesPage() {
                     variant="ghost"
                     size="sm"
                     className="text-[#16a34a] hover:text-[#15803d]"
+                    onClick={() => handleEdit(init)}
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
