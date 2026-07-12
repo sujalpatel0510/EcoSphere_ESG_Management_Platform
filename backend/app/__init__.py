@@ -15,4 +15,7 @@ def create_app(config_class=Config):
     # Register blueprints
     register_blueprints(app)
 
+    with app.app_context():
+        db.create_all()
+
     return app
