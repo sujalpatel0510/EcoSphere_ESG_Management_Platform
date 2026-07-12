@@ -76,7 +76,16 @@ export default function RewardsPage() {
     if (!reward || userPoints < reward.points) return
 
     setUserPoints((current) => current - reward.points)
-    setRewards((current) => current.map((item) => item.id === rewardId ? { ...item, available: Math.max(0, item.available - 1), redeemed: item.redeemed + 1 } : item)))
+    setRewards((current) =>
+      current.map((item) => {
+        if (item.id !== rewardId) return item
+        return {
+          ...item,
+          available: Math.max(0, item.available - 1),
+          redeemed: item.redeemed + 1,
+        }
+      }),
+    )
     setHistory((current) => [{ id: Date.now(), user: 'You', reward: reward.name, points: reward.points, date: new Date().toISOString().slice(0, 10), status: 'Redeemed' }, ...current])
     setMessage(`${reward.name} redeemed successfully`)
   }
