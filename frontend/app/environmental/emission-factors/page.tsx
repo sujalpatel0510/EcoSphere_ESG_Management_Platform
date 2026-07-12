@@ -87,22 +87,22 @@ export default function EmissionFactorsPage() {
               <CardTitle className="text-lg">Add New Emission Factor</CardTitle>
             </CardHeader>
             <CardContent>
-              <form className="grid grid-cols-1 md:grid-cols-4 gap-4" onSubmit={handleSubmit}>
+              <form className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>Factor Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., Electricity" required />
+                  <Input placeholder="e.g., Electricity" />
                 </div>
                 <div className="space-y-2">
                   <Label>Unit</Label>
-                  <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="e.g., kWh" required />
+                  <Input placeholder="e.g., kWh" />
                 </div>
                 <div className="space-y-2">
                   <Label>CO2 Factor (kg CO2e)</Label>
-                  <Input value={form.co2Factor} onChange={(e) => setForm({ ...form, co2Factor: e.target.value })} placeholder="e.g., 0.233" type="number" step="0.001" required />
+                  <Input placeholder="e.g., 0.233" type="number" step="0.001" />
                 </div>
                 <div className="space-y-2 flex flex-col justify-end gap-2">
-                  <Button type="submit" variant="eco-green" className="w-full">Save</Button>
-                  <Button type="button" variant="outline" className="w-full" onClick={() => setShowForm(false)}>Cancel</Button>
+                  <Button variant="eco-green" className="w-full">Save</Button>
+                  <Button variant="outline" className="w-full" onClick={() => setShowForm(false)}>Cancel</Button>
                 </div>
               </form>
             </CardContent>
