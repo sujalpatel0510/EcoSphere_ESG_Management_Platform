@@ -1,66 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Plus, Search, FileText, CheckCircle2, AlertCircle, Clock, Download } from 'lucide-react'
-
-const policies = [
-  {
-    id: 1,
-    name: 'Code of Conduct',
-    category: 'Ethics',
-    status: 'Approved',
-    version: 'v3.2',
-    lastUpdated: '2024-05-15',
-    nextReview: '2024-11-15',
-    coverage: '100%',
-  },
-  {
-    id: 2,
-    name: 'Data Privacy Policy',
-    category: 'Compliance',
-    status: 'Approved',
-    version: 'v2.1',
-    lastUpdated: '2024-04-20',
-    nextReview: '2024-10-20',
-    coverage: '95%',
-  },
-  {
-    id: 3,
-    name: 'Environmental Policy',
-    category: 'Environmental',
-    status: 'In Review',
-    version: 'v1.0',
-    lastUpdated: '2024-06-01',
-    nextReview: '2024-12-01',
-    coverage: '78%',
-  },
-  {
-    id: 4,
-    name: 'Anti-Corruption Policy',
-    category: 'Ethics',
-    status: 'Approved',
-    version: 'v2.0',
-    lastUpdated: '2024-03-15',
-    nextReview: '2024-09-15',
-    coverage: '100%',
-  },
-  {
-    id: 5,
-    name: 'Workplace Safety Policy',
-    category: 'Social',
-    status: 'Pending Approval',
-    version: 'v1.5',
-    lastUpdated: '2024-06-10',
-    nextReview: '2024-12-10',
-    coverage: '82%',
-  },
-]
+import { Plus, Search, FileText, CheckCircle2, AlertCircle, Clock, Download, Edit2, Trash2 } from 'lucide-react'
 
 const complianceMetrics = [
   { name: 'Policies Approved', value: 3, total: 5, percentage: 60 },
@@ -70,10 +17,65 @@ const complianceMetrics = [
 ]
 
 export default function PoliciesCompliancePage() {
+  const [policies, setPolicies] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [form, setForm] = useState({ name: '', category: 'Compliance', status: 'Approved', version: 'v1.0', lastUpdated: '', nextReview: '', coverage: '0%' })
 
   const categories = ['All', 'Ethics', 'Compliance', 'Environmental', 'Social']
+
+  const loadPolicies = () => {
+    fetch('http://127.0.0.1:5000/api/governance/policies')
+      .then((res) => res.json())
+      .then((data) => setPolicies(data))
+      .catch((err) => console.error('Error fetching policies:', err))
+  }
+
+  useEffect(() => {
+    loadPolicies()
+  }, [])
+
+  const resetForm = () => {
+    setForm({ name: '', category: 'Compliance', status: 'Approved', version: 'v1.0', lastUpdated: '', nextReview: '', coverage: '0%' })
+    setEditingId(null)
+  }
+
+  const handleSave = () => {
+    const method = editingId ? 'PUT' : 'POST'
+    fetch(`http://127.0.0.1:5000/api/governance/policies${editingId ? `/${editingId}` : ''}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+      .then(() => {
+        loadPolicies()
+        setOpen(false)
+        resetForm()
+      })
+      .catch((err) => console.error('Error saving policy:', err))
+  }
+
+  const handleDelete = (id: number) => {
+    fetch(`http://127.0.0.1:5000/api/governance/policies/${id}`, { method: 'DELETE' })
+      .then(() => setPolicies(policies.filter((policy) => policy.id !== id)))
+      .catch((err) => console.error('Error deleting policy:', err))
+  }
+
+  const handleEdit = (policy: any) => {
+    setEditingId(policy.id)
+    setForm({
+      name: policy.name,
+      category: policy.category,
+      status: policy.status,
+      version: policy.version,
+      lastUpdated: policy.lastUpdated || '',
+      nextReview: policy.nextReview || '',
+      coverage: policy.coverage,
+    })
+    setOpen(true)
+  }
 
   const filteredPolicies = policies.filter(
     (policy) =>
@@ -95,36 +97,54 @@ export default function PoliciesCompliancePage() {
               Manage company policies and compliance requirements
             </p>
           </div>
-          <Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#16a34a] hover:bg-[#15803d] text-white gap-2">
+              <Button className="bg-[#16a34a] hover:bg-[#15803d] text-white gap-2" onClick={resetForm}>
                 <Plus className="w-4 h-4" />
                 New Policy
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Policy</DialogTitle>
+                <DialogTitle>{editingId ? 'Edit Policy' : 'Create New Policy'}</DialogTitle>
                 <DialogDescription>
-                  Add a new company policy document
+                  {editingId ? 'Update the policy details.' : 'Add a new company policy document.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Policy Name</label>
-                  <Input placeholder="e.g., Remote Work Policy" />
+                  <Input placeholder="e.g., Remote Work Policy" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
-                  <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background">
-                    <option>Ethics</option>
-                    <option>Compliance</option>
-                    <option>Environmental</option>
-                    <option>Social</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Category</label>
+                    <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                      <option>Ethics</option>
+                      <option>Compliance</option>
+                      <option>Environmental</option>
+                      <option>Social</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Status</label>
+                    <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                      <option>Approved</option>
+                      <option>In Review</option>
+                      <option>Pending Approval</option>
+                    </select>
+                  </div>
                 </div>
-                <Button className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
-                  Create Policy
+                <div className="grid grid-cols-2 gap-4">
+                  <Input placeholder="Version" value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} />
+                  <Input placeholder="Coverage" value={form.coverage} onChange={(e) => setForm({ ...form, coverage: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input type="date" value={form.lastUpdated} onChange={(e) => setForm({ ...form, lastUpdated: e.target.value })} />
+                  <Input type="date" value={form.nextReview} onChange={(e) => setForm({ ...form, nextReview: e.target.value })} />
+                </div>
+                <Button className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white" onClick={handleSave}>
+                  {editingId ? 'Save Changes' : 'Create Policy'}
                 </Button>
               </div>
             </DialogContent>
@@ -250,13 +270,17 @@ export default function PoliciesCompliancePage() {
                       )}
                       {policy.status}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-[#16a34a] hover:text-[#15803d]"
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" className="text-[#16a34a] hover:text-[#15803d]" onClick={() => handleEdit(policy)}>
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(policy.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-[#16a34a] hover:text-[#15803d]">
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
