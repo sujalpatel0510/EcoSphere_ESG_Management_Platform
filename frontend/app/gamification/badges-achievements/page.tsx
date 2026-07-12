@@ -1,115 +1,93 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Star, Trophy, Zap, Heart, Leaf, Users } from 'lucide-react'
+import { Star, Trophy, Zap, Heart, Leaf, Users, Plus, Edit2, Trash2 } from 'lucide-react'
 
-const badges = [
-  {
-    id: 1,
-    name: 'Carbon Champion',
-    description: 'Reduced carbon emissions by 30%',
-    icon: Leaf,
-    color: 'bg-green-100 text-green-600',
-    earners: 45,
-    rarity: 'Rare',
-    criteria: 'Achieve 30% carbon reduction',
-  },
-  {
-    id: 2,
-    name: 'Sustainability Star',
-    description: 'Completed 5 sustainability initiatives',
-    icon: Star,
-    color: 'bg-yellow-100 text-yellow-600',
-    earners: 128,
-    rarity: 'Common',
-    criteria: 'Complete 5 ESG initiatives',
-  },
-  {
-    id: 3,
-    name: 'Community Champion',
-    description: 'Volunteered 20+ hours for community',
-    icon: Heart,
-    color: 'bg-red-100 text-red-600',
-    earners: 67,
-    rarity: 'Uncommon',
-    criteria: 'Volunteer 20+ community hours',
-  },
-  {
-    id: 4,
-    name: 'ESG Excellence',
-    description: 'Achieved excellence in all ESG metrics',
-    icon: Trophy,
-    color: 'bg-purple-100 text-purple-600',
-    earners: 12,
-    rarity: 'Epic',
-    criteria: 'Top 5% in all ESG categories',
-  },
-  {
-    id: 5,
-    name: 'Team Player',
-    description: 'Helped 10+ colleagues meet ESG goals',
-    icon: Users,
-    color: 'bg-blue-100 text-blue-600',
-    earners: 34,
-    rarity: 'Rare',
-    criteria: 'Help 10+ teammates',
-  },
-  {
-    id: 6,
-    name: 'Energizer',
-    description: 'Completed 3 challenges in one month',
-    icon: Zap,
-    color: 'bg-orange-100 text-orange-600',
-    earners: 89,
-    rarity: 'Common',
-    criteria: 'Complete 3 challenges/month',
-  },
-]
-
-const achievements = [
-  {
-    id: 1,
-    badge: 'Sustainability Star',
-    user: 'Sarah Chen',
-    date: '2024-06-10',
-    description: 'Completed 5 sustainability initiatives',
-  },
-  {
-    id: 2,
-    badge: 'Carbon Champion',
-    user: 'Michael Johnson',
-    date: '2024-06-08',
-    description: 'Reduced carbon emissions by 35%',
-  },
-  {
-    id: 3,
-    badge: 'Community Champion',
-    user: 'Priya Sharma',
-    date: '2024-06-05',
-    description: 'Volunteered 25 hours for community',
-  },
-  {
-    id: 4,
-    badge: 'Team Player',
-    user: 'James Wilson',
-    date: '2024-06-01',
-    description: 'Helped 12 colleagues meet ESG goals',
-  },
-  {
-    id: 5,
-    badge: 'Energizer',
-    user: 'Emma Rodriguez',
-    date: '2024-05-28',
-    description: 'Completed 4 challenges in May',
-  },
-]
+const iconMap: Record<string, any> = { Leaf, Star, Trophy, Zap, Heart, Users }
 
 export default function BadgesAchievementsPage() {
+  const [badges, setBadges] = useState<any[]>([])
+  const [achievements, setAchievements] = useState<any[]>([])
   const [selectedRarity, setSelectedRarity] = useState('All')
+  const [badgeOpen, setBadgeOpen] = useState(false)
+  const [achievementOpen, setAchievementOpen] = useState(false)
+  const [badgeForm, setBadgeForm] = useState({ name: '', description: '', rarity: 'Common', criteria: '', color: 'bg-gray-100 text-gray-700' })
+  const [achievementForm, setAchievementForm] = useState({ badgeName: '', user: '', date: '', description: '' })
+  const [editingBadgeId, setEditingBadgeId] = useState<number | null>(null)
+
+  const loadData = () => {
+    fetch('http://127.0.0.1:5000/api/gamification/badges')
+      .then((res) => res.json())
+      .then((data) => setBadges(data))
+      .catch((err) => console.error('Error fetching badges:', err))
+
+    fetch('http://127.0.0.1:5000/api/gamification/achievements')
+      .then((res) => res.json())
+      .then((data) => setAchievements(data))
+      .catch((err) => console.error('Error fetching achievements:', err))
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const resetBadgeForm = () => {
+    setBadgeForm({ name: '', description: '', rarity: 'Common', criteria: '', color: 'bg-gray-100 text-gray-700' })
+    setEditingBadgeId(null)
+  }
+
+  const handleSaveBadge = () => {
+    const method = editingBadgeId ? 'PUT' : 'POST'
+    fetch(`http://127.0.0.1:5000/api/gamification/badges${editingBadgeId ? `/${editingBadgeId}` : ''}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(badgeForm),
+    })
+      .then(() => {
+        loadData()
+        setBadgeOpen(false)
+        resetBadgeForm()
+      })
+      .catch((err) => console.error('Error saving badge:', err))
+  }
+
+  const handleDeleteBadge = (id: number) => {
+    fetch(`http://127.0.0.1:5000/api/gamification/badges/${id}`, { method: 'DELETE' })
+      .then(() => setBadges(badges.filter((badge) => badge.id !== id)))
+      .catch((err) => console.error('Error deleting badge:', err))
+  }
+
+  const handleEditBadge = (badge: any) => {
+    setEditingBadgeId(badge.id)
+    setBadgeForm({
+      name: badge.name,
+      description: badge.description,
+      rarity: badge.rarity,
+      criteria: badge.criteria,
+      color: badge.color,
+    })
+    setBadgeOpen(true)
+  }
+
+  const handleSaveAchievement = () => {
+    fetch('http://127.0.0.1:5000/api/gamification/achievements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(achievementForm),
+    })
+      .then(() => {
+        loadData()
+        setAchievementOpen(false)
+        setAchievementForm({ badgeName: '', user: '', date: '', description: '' })
+      })
+      .catch((err) => console.error('Error saving achievement:', err))
+  }
 
   const rarities = ['All', 'Common', 'Uncommon', 'Rare', 'Epic']
   
@@ -136,13 +114,65 @@ export default function BadgesAchievementsPage() {
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Badges & Achievements
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Track and celebrate employee achievements
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Badges & Achievements
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Track and celebrate employee achievements
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Dialog open={badgeOpen} onOpenChange={setBadgeOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#16a34a] hover:bg-[#15803d] text-white" onClick={resetBadgeForm}>
+                  <Plus className="w-4 h-4 mr-2" />New Badge
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingBadgeId ? 'Edit Badge' : 'Create Badge'}</DialogTitle>
+                  <DialogDescription>Manage gamification badges from the database.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="Badge name" value={badgeForm.name} onChange={(e) => setBadgeForm({ ...badgeForm, name: e.target.value })} />
+                  <Input placeholder="Description" value={badgeForm.description} onChange={(e) => setBadgeForm({ ...badgeForm, description: e.target.value })} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background" value={badgeForm.rarity} onChange={(e) => setBadgeForm({ ...badgeForm, rarity: e.target.value })}>
+                      <option>Common</option>
+                      <option>Uncommon</option>
+                      <option>Rare</option>
+                      <option>Epic</option>
+                    </select>
+                    <Input placeholder="Color class" value={badgeForm.color} onChange={(e) => setBadgeForm({ ...badgeForm, color: e.target.value })} />
+                  </div>
+                  <Input placeholder="Criteria" value={badgeForm.criteria} onChange={(e) => setBadgeForm({ ...badgeForm, criteria: e.target.value })} />
+                  <Button className="w-full" onClick={handleSaveBadge}>{editingBadgeId ? 'Save Changes' : 'Create Badge'}</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={achievementOpen} onOpenChange={setAchievementOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Plus className="w-4 h-4 mr-2" />New Achievement
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Achievement</DialogTitle>
+                  <DialogDescription>Record a new achievement earned by a team member.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input placeholder="Badge name" value={achievementForm.badgeName} onChange={(e) => setAchievementForm({ ...achievementForm, badgeName: e.target.value })} />
+                  <Input placeholder="User" value={achievementForm.user} onChange={(e) => setAchievementForm({ ...achievementForm, user: e.target.value })} />
+                  <Input type="date" value={achievementForm.date} onChange={(e) => setAchievementForm({ ...achievementForm, date: e.target.value })} />
+                  <Input placeholder="Description" value={achievementForm.description} onChange={(e) => setAchievementForm({ ...achievementForm, description: e.target.value })} />
+                  <Button className="w-full" onClick={handleSaveAchievement}>Create Achievement</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Stats */}
@@ -225,7 +255,7 @@ export default function BadgesAchievementsPage() {
         {/* Badges Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredBadges.map((badge) => {
-            const Icon = badge.icon
+            const Icon = iconMap[badge.name.split(' ')[0]] || Trophy
             return (
               <Card key={badge.id} className="border-0 shadow-sm hover:shadow-md transition">
                 <CardContent className="pt-6">
@@ -259,9 +289,14 @@ export default function BadgesAchievementsPage() {
                         </div>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full">
-                      View Criteria
-                    </Button>
+                    <div className="flex gap-2 w-full">
+                      <Button variant="outline" className="flex-1" onClick={() => handleEditBadge(badge)}>
+                        <Edit2 className="w-4 h-4 mr-2" />Edit
+                      </Button>
+                      <Button variant="ghost" className="text-red-600" onClick={() => handleDeleteBadge(badge.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
